@@ -18,7 +18,7 @@ try:
     mlp_model, scaler, lstm_model = load_all_assets()
     st.sidebar.success("✅ الأنظمة جاهزة")
 except Exception as e:
-    st.sidebar.error(f"❌ مشكلة في الملفات")
+    st.sidebar.error("❌ مشكلة في تحميل الملفات")
 
 # 3. واجهة المستخدم
 st.title("🤖 نظام توقع استهلاك الطاقة الكهربائية")
@@ -39,28 +39,34 @@ with col2:
     st.success("### 📊 نتائج التحليل")
     if predict_btn:
         try:
-            # تجهيز مصفوفة بها 10 أعمدة (عشان الميزان ما يزعلش)
-            dummy_data = np.zeros((1, 10))
-            dummy_data[0, 0] = input_val # بنحط الرقم بتاعك في أول عمود
+            # الحل السحري: نعرف الميزان محتاج كام عمود بالظبط ونملاهم أصفار
+            num_features = scaler.n_features_in_
+            data_ready = np.zeros((1, num_features))
+            data_ready[0, 0] = input_val # بنحط استهلاكك في أول خانة
             
             if "MLP" in model_choice:
-                # وزن البيانات باستخدام الميزان الأصلي
-                scaled_data = scaler.transform(dummy_data)
+                # التحويل باستخدام الميزان (Scaling)
+                scaled_data = scaler.transform(data_ready)
                 # التوقع
                 res = mlp_model.predict(scaled_data)[0][0]
             else:
-                # موديل LSTM يتوقع بيانات ثلاثية الأبعاد
-                lstm_input = dummy_data.reshape(1, 1, 10)
-                res = lstm_model.predict(lstm_input)[0][0]
+                # لـ LSTM بنحتاج نعدل شكل البيانات (1, 1, عدد الأعمدة)
+                # لو الـ LSTM متدرب على 10 بس، هنعدل الـ data_ready
+                try:
+                    lstm_input = data_ready[:, :10].reshape(1, 1, 10)
+                    res = lstm_model.predict(lstm_input)[0][0]
+                except:
+                    lstm_input = data_ready.reshape(1, 1, num_features)
+                    res = lstm_model.predict(lstm_input)[0][0]
 
-            # عرض النتيجة
+            # عرض النتيجة بشكل شيك جداً
             st.metric(label=f"التكلفة المتوقعة ({model_choice})", value=f"{res:.2f} جنيه")
             st.balloons()
             
         except Exception as e:
             st.error(f"حدث خطأ في الحساب: {e}")
     else:
-        st.write("انتظار إدخال البيانات والضغط على الزر...")
+        st.write("أدخل البيانات ثم اضغط على الزر ليظهر التوقع هنا.")
 
 st.markdown("---")
 st.caption(" مشروع التخرج 2026")
