@@ -11,7 +11,7 @@ st.set_page_config(page_title="Electricity Predictor", layout="centered")
 
 # This ensures the app finds files relative to this script's location on the server
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "multi_output_lstm_model.h5")
+MODEL_PATH = os.path.join(BASE_DIR, "multi_output_lstm_model.keras")
 SCALER_PATH = os.path.join(BASE_DIR, "feature_scaler.joblib")
 
 # --- 2. CORE FUNCTIONS ---
@@ -26,7 +26,8 @@ def load_model_and_scaler(model_path, scaler_path):
         st.error(f"Scaler file not found at: {scaler_path}")
         st.stop()
     
-    model = keras.models.load_model(model_path, compile=False)
+    model = keras.models.load_model("multi_output_lstm_model.h5", compile=False)
+    model.save("multi_output_lstm_model.keras")
     scaler = joblib.load(scaler_path)
     return model, scaler
 
