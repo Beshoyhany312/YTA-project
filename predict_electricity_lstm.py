@@ -3,20 +3,26 @@ import joblib
 import numpy as np
 import tensorflow as tf
 
-st.set_page_config(page_title="توقع تكلفة الكهرباء - 12 Feature", layout="wide")
+# 1. إعدادات الصفحة
+st.set_page_config(page_title="نظام التوقع الذكي"، layout="wide")
 
 @st.cache_resource
 def load_all():
     scaler = joblib.load('scaler.joblib')
+    # تحميل الموديل بدون الـ compilation عشان نتفادى مشاكل الـ Custom Objects
     lstm = tf.keras.models.load_model('multi_output_lstm_model.h5', compile=False)
     return scaler, lstm
 
-scaler, lstm_model = load_all()
+try:
+    scaler, lstm_model = load_all()
+    st.sidebar.success("✅ الأنظمة جاهزة")
+except Exception as e:
+    st.sidebar.error("❌ تأكدي من وجود الملفات")
 
-st.title("⚡ نظام إدارة طاقة المدينة الذكية")
+st.title("⚡ لوحة تحكم المدينة الذكية - توقع التكلفة")
 st.markdown("---")
 
-# 12 مدخل بالظبط زي ترتيب الإكسيل بتاعك
+# 2. واجهة المستخدم (الـ 12 عمود بتوعك)
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -39,23 +45,32 @@ with col3:
 
 if st.button("🚀 توقع التكلفة الآن"):
     try:
-        # 1. بنجمع الـ 12 مدخل اللي دخلتيهم
-        user_inputs = [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12]
+        # تجهيز الداتا (12 مدخل + صفر للسعر عشان يكملوا 13)
+        input_raw = np.array([[f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, 0.0]])
         
-        # 2. التركة: بنزود رقم "صفر" يدوي عشان نكملهم 13 خانة للميزان
-        full_input = np.array([user_inputs + [0.0]]) 
+        # تحويل البيانات بالميزان
+        scaled_data = scaler.transform(input_raw)
         
-        # 3. الميزان (Scaler) هيشتغل دلوقتي صح لأن لقى 13 خانة
-        scaled_data = scaler.transform(full_input)
-        
-        # 4. التوقع (LSTM) - بنشكله (1, 1, 13) زي ما طلب في الصورة
+        # التشكيل للـ LSTM
         lstm_input = scaled_data.reshape(1, 1, 13)
         
+        # التوقع
         prediction = lstm_model.predict(lstm_input)
-        res = prediction[0][0]
         
-        st.success(f"### التكلفة المتوقعة: {abs(res):.2f} دولار")
+        # هنا الخلاصة: بما إنه Multi-output، الموديل بيطلع 13 قيمة
+        # إحنا بنعمل Inverse Transform عشان نرجع الأرقام لأصلها (دولار/جنيه)
+        # وبناخد القيمة رقم 13 (index -1) اللي هي التكلفة
+        unscaled_prediction = scaler.inverse_transform(prediction.reshape(1, 13))
+        final_cost = unscaled_prediction[0][-1]
+        
         st.balloons()
+        st.success(f"### 💰 التكلفة المتوقعة: {abs(final_cost):,.2f} دولار")
+        
+        # عرض مقارنة بسيطة (اختياري للمناقشة)
+        st.info(f"💡 تم الحساب بناءً على استهلاك {f12} kWh وعوامل البيئة المحيطة.")
         
     except Exception as e:
-        st.error(f"الخطأ لسه موجود: {e}")
+        st.error(f"حدث خطأ: {e}")
+
+st.markdown("---")
+st.caption("مشروع التخرج 2026 - المهندسة سلمى")
