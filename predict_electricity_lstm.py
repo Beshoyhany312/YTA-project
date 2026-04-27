@@ -39,34 +39,32 @@ with col2:
     st.success("### 📊 نتائج التحليل")
     if predict_btn:
         try:
-            # الحل السحري: نعرف الميزان محتاج كام عمود بالظبط ونملاهم أصفار
-            num_features = scaler.n_features_in_
-            data_ready = np.zeros((1, num_features))
-            data_ready[0, 0] = input_val # بنحط استهلاكك في أول خانة
+            # الحل الجذري للاختلاف بين الـ Scaler والموديل
+            # 1. بنشوف الـ Scaler محتاج كام (غالباً 12)
+            num_scaler_features = scaler.n_features_in_
+            data_for_scaler = np.zeros((1, num_scaler_features))
+            data_for_scaler[0, 0] = input_val
+            
+            # 2. بنعمل الـ Scaling
+            scaled_full = scaler.transform(data_for_scaler)
             
             if "MLP" in model_choice:
-                # التحويل باستخدام الميزان (Scaling)
-                scaled_data = scaler.transform(data_ready)
-                # التوقع
-                res = mlp_model.predict(scaled_data)[0][0]
+                # الموديل محتاج أول 10 أعمدة بس من الـ 12
+                final_input = scaled_full[:, :10]
+                res = mlp_model.predict(final_input)[0][0]
             else:
-                # لـ LSTM بنحتاج نعدل شكل البيانات (1, 1, عدد الأعمدة)
-                # لو الـ LSTM متدرب على 10 بس، هنعدل الـ data_ready
-                try:
-                    lstm_input = data_ready[:, :10].reshape(1, 1, 10)
-                    res = lstm_model.predict(lstm_input)[0][0]
-                except:
-                    lstm_input = data_ready.reshape(1, 1, num_features)
-                    res = lstm_model.predict(lstm_input)[0][0]
+                # موديل LSTM برضه بياخد أول 10 أعمدة وشكل ثلاثي الأبعاد
+                final_input = scaled_full[:, :10].reshape(1, 1, 10)
+                res = lstm_model.predict(final_input)[0][0]
 
-            # عرض النتيجة بشكل شيك جداً
+            # عرض النتيجة
             st.metric(label=f"التكلفة المتوقعة ({model_choice})", value=f"{res:.2f} جنيه")
             st.balloons()
             
         except Exception as e:
             st.error(f"حدث خطأ في الحساب: {e}")
     else:
-        st.write("أدخل البيانات ثم اضغط على الزر ليظهر التوقع هنا.")
+        st.write("أدخل البيانات ثم اضغط على الزر...")
 
 st.markdown("---")
 st.caption(" مشروع التخرج 2026")
