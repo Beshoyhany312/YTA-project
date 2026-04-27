@@ -13,7 +13,7 @@ def load_all_assets():
     mlp = joblib.load('mlp_doubled_neurons_model.joblib')
     scaler = joblib.load('scaler.joblib')
     # الموديل الثاني (LSTM)
-    lstm = tf.keras.models.load_model('multi_output_lstm_model.h5')
+    lstm = tf.keras.models.load_model('multi_output_lstm_model.h5',compile=false)
     return mlp, scaler, lstm
 
 try:
